@@ -21,6 +21,19 @@ impl From<u8> for Reg {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from() {
+        assert_eq!(Reg::R0, Reg::from(0));
+        assert_eq!(Reg::R1, Reg::from(1));
+        assert_eq!(Reg::R2, Reg::from(2));
+        assert_eq!(Reg::R3, Reg::from(3));
+    }
+}
+
 /// 4 entrées (codées sur 2 bits)
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Input {
@@ -28,6 +41,18 @@ enum Input {
     I1,
     I2,
     I3,
+}
+
+impl From<u8> for Input {
+    fn from(value: u8) -> Self{
+        match value {
+            0b00 => Input::I0,
+            0b01 => Input::I1,
+            0b02 => Input::I2,
+            0b03 => Input::I3,
+            _ => unreachable!("a 2-bit field can only be 0 to 3"),
+        }
+    }
 }
 
 /// 4 Opérations (codées sur 2 bits)
