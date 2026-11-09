@@ -1,5 +1,44 @@
 use env::{cartpole::CartPole, Environment, pcgrng::PCGRng};
 
+/// 4 registres (codés sur 2 bits)
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Reg {
+    R0,
+    R1,
+    R2,
+    R3,
+}
+
+impl From<u8> for Reg {
+    fn from(value: u8) -> Self{
+        match value {
+            0b00 => Reg::R0,
+            0b01 => Reg::R1,
+            0b10 => Reg::R2,
+            0b11 => Reg::R3,
+            _ => unreachable!("a 2-bit field can only be 0 to 3"),
+        }
+    }
+}
+
+/// 4 entrées (codées sur 2 bits)
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Input {
+    I0,
+    I1,
+    I2,
+    I3,
+}
+
+/// 4 Opérations (codées sur 2 bits)
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Op {
+    Add,
+    Sub,
+    Mul,
+    Div,
+}
+
 fn main() {
     let seed = 1;
     let mut rng = PCGRng::seed(seed);
