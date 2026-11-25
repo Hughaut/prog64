@@ -233,26 +233,112 @@ mod tests_decode_instruction {
 
 
 /// Fonction d'application d'une operation en fonction de l'entrée et de 2 variables a et b. Retourne le résultat de l'opération.
+/// Si l'opération est une division et que b est égal à 0, retourne 0 pour éviter la division par zéro.
+/// Si le résultat de l'opération n'est pas un nombre fini (NaN ou infini), retourne 0.
 fn apply_operation(op: Op, a: f32, b: f32) -> f32 {
-    match op {
+    let result = match op {
         Op::Add => a + b,
         Op::Sub => a - b,
         Op::Mul => a * b,
         Op::Div => {
             if b == 0.0 {
-                0.0 // éviter la division par zéro
+                0.0
             } else {
                 a / b
             }
         }
+    };
+    if result.is_finite() {
+        result
+    } else {
+        0.0
     }
+}
+
+#[cfg(test)]
+mod tests_apply_operation {
+    use super::*;
+
+    #[test]
+    fn test_apply_operation() {
+        assert_eq!(apply_operation(Op::Add, 2.0, 3.0), 5.0);
+        assert_eq!(apply_operation(Op::Sub, 5.0, 3.0), 2.0);
+        assert_eq!(apply_operation(Op::Mul, 2.0, 3.0), 6.0);
+        assert_eq!(apply_operation(Op::Div, 6.0, 3.0), 2.0);
+        assert_eq!(apply_operation(Op::Div, 6.0, 0.0), 0.0); // division par zéro
+    }
+}
+
+/// Structure représentant un programme composé de 8 instructions codées sur 64 bits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct Program (u64);
+
+impl Program {
+
+    /// Exécute le programme sur les entrées données et retourne la valeur du registre R0 après l'exécution.
+    /// Initialisation des registres à 0.0.
+    /// Chaque instruction est exécutée dans l'ordre
+    /// On lit une ligne d'instruction, on applique l'opération sur le registre source et l'entrée correspondante, et on stocke le résultat dans le registre destination.
+    /// R0 est retrouné à la fin de l'exécution du programme.
+    fn run(&self, inputs: [f32; 4]) -> f32 {
+        let mut registers: [f32; 4] = [0.0; 4];
+
+        for line in 0..NB_LINES {
+            let instruction = decode_instruction(self.0, line);
+            let res = apply_operation(instruction.op, registers[instruction.reg as usize], inputs[instruction.input as usize]);
+            registers[instruction.dest as usize] = res;
+        }
+
+        registers[0]
+    }
+}
+
+#[cfg(test)]
+mod tests_program {
+    use super::*;
+
+    #[test]
+    fn test_run_program() {
+        let program = Program(0b00_00_00_00u64 | (0b01_00_00_00u64 << 8) | (0b10_01_00_00u64 << 16) | (0b11_10_00_00u64 << 24)
+            | (0b00_11_00_00u64 << 32) | (0b01_01_00_00u64 << 40) | (0b10_10_00_00u64 << 48) | (0b11_11_00_00u64 << 56));
+
+        let inputs = [1.0, 2.0, 3.0, 4.0];
+        let result = program.run(inputs);
+        assert_eq!(result, 1.5);
+    }
+}
+
+/// Fonction d'évaluation d'un programme
+/// Elle joue un épisode complet et retourne le nombre de pas effectués
+/// On utilise env.resest pour initialiser l'environnement aléatoirement
+/// Puis on exectute le programme jusqu'à ce que donne = true
+fn evaluate(program: &Program, env: &mut CartPole, rng: &mut PCGRng) -> env::Score {
+    let mut total_reward = 0.0;
+    let mut done = false;
+
+    let mut state = env.reset(rng);
+
+    while !done {
+        let inputs = state;
+        let action = program.run(inputs);
+        let reward;
+        (state, reward, done) = env.step(action, rng);
+        total_reward += reward;
+    }
+
+    total_reward
 }
 
 fn main() {
     let seed = 1;
     let mut rng = PCGRng::seed(seed);
     let mut env = CartPole::default();
-    let mut total_reward = 0.0;
+
+    let program = Program(0);
+
+    let score = evaluate(&program, &mut env, &mut rng);
+    println!("Score du programme : {}", score);
+    /*let mut total_reward = 0.0;
 
     loop {
         let action = (rng.next_u32() % 4) as f32;
@@ -264,5 +350,5 @@ fn main() {
         }
     }
 
-    println!("Total reward: {}", total_reward)
+    println!("Total reward: {}", total_reward)*/
 }
